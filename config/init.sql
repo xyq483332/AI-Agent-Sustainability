@@ -99,10 +99,10 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name);
 
--- Insert default admin user
-INSERT INTO users (username, email, password_hash, status) VALUES
-('admin', 'admin@starkindustries.com', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36Kz2G3k2BEa.1VQ5Q5Q5Q5', 'active')
-ON CONFLICT (username) DO NOTHING;
+-- NOTE: Do NOT insert admin user here with hardcoded password.
+-- Create admin user via application bootstrap or migration script:
+--   INSERT INTO users (username, email, password_hash, status) VALUES
+--   ('admin', 'admin@example.com', '<bcrypt_hash>', 'active');
 
 -- Insert default roles
 INSERT INTO roles (name, description, permissions) VALUES
