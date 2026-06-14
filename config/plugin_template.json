@@ -1,0 +1,26 @@
+{
+  "name": "sample-plugin",
+  "version": "1.0.0",
+  "description": "Sample plugin for AI agent sustainable evolution",
+  "module": "src.plugins.sample_plugin",
+  "lifecycles": {
+    "load": "load_plugin",
+    "execute": "execute_task",
+    "shutdown": "cleanup_resources"
+  },
+  "permissions": [
+    "read_memory",
+    "call_tool:searxng"
+  ],
+  "dependencies": [
+    "base_agent"
+  ],
+  "security": {
+    "network_whitelist": [
+      "192.168.1.0/24"
+    ],
+    "file_read_paths": [
+      "/volume1/docker/qwenpaw/"
+    ]
+  }
+}
