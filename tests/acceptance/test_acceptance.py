@@ -543,26 +543,44 @@ class TestCICDPipelineAcceptance:
         assert len(python_versions) > 0, "Python 版本列表为空"
 
     def test_ac003_code_quality_checks(self):
-        """AC-003: 代码质量检查步骤"""
+        """AC-003: 代码质量检查步骤 (linting job)"""
         workflow_file = self.project_root / ".github" / "workflows" / "ci-cd.yml"
 
         with open(workflow_file, "r") as f:
             content = yaml.safe_load(f)
 
-        test_job = content.get("jobs", {}).get("test", {})
-        steps = test_job.get("steps", [])
+        jobs = content.get("jobs", {})
 
-        # 收集所有步骤名称
-        step_names = []
-        for step in steps:
-            if isinstance(step, dict):
-                step_names.append(step.get("name", ""))
+        # 验收标准: 存在独立的 linting job 或 test job 中包含 linting 步骤
+        has_linting_job = "linting" in jobs
 
-        # 验收标准: 包含 black, flake8, isort 检查步骤
-        steps_text = " ".join(step_names).lower()
-        assert "black" in steps_text or "linting" in steps_text, "缺少 black 检查"
-        assert "flake8" in steps_text or "linting" in steps_text, "缺少 flake8 检查"
-        assert "isort" in steps_text or "linting" in steps_text, "缺少 isort 检查"
+        if has_linting_job:
+            # linting job 中收集所有步骤名称和运行命令
+            linting_job = jobs["linting"]
+            linting_steps = linting_job.get("steps", [])
+            linting_text = ""
+            for step in linting_steps:
+                if isinstance(step, dict):
+                    linting_text += step.get("name", "") + " "
+                    run_cmd = step.get("run", "")
+                    if isinstance(run_cmd, str):
+                        linting_text += run_cmd + " "
+            linting_text = linting_text.lower()
+            assert "black" in linting_text, "linting job 中缺少 black 检查"
+            assert "flake8" in linting_text, "linting job 中缺少 flake8 检查"
+            assert "isort" in linting_text, "linting job 中缺少 isort 检查"
+        else:
+            # 回退: 检查 test job 步骤中是否包含 linting
+            test_job = jobs.get("test", {})
+            steps = test_job.get("steps", [])
+            step_names = []
+            for step in steps:
+                if isinstance(step, dict):
+                    step_names.append(step.get("name", ""))
+            steps_text = " ".join(step_names).lower()
+            assert "black" in steps_text or "linting" in steps_text, "缺少 black 检查"
+            assert "flake8" in steps_text or "linting" in steps_text, "缺少 flake8 检查"
+            assert "isort" in steps_text or "linting" in steps_text, "缺少 isort 检查"
 
     def test_ac005_unit_tests_coverage(self):
         """AC-005: 单元测试覆盖率步骤"""
