@@ -1,7 +1,7 @@
 # OpenTelemetry Collector Configuration
 # Pipeline: App (OTel SDK) → OTLP → OTel Collector → Prometheus → Grafana
 #
-# Deployed: ten-agent-otel-collector on NAS (192.168.1.3)
+# Deployed: ten-agent-otel-collector on NAS host network
 # NetworkMode: host (all ports bind directly to host)
 # Config path on host: /volume1/docker/otel-collector/config.yaml
 # Config path in container: /etc/otelcol-contrib/config.yaml

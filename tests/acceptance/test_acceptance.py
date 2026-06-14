@@ -268,11 +268,11 @@ class TestSecuritySandboxAcceptance:
     def test_ac004_network_access_control(self):
         """AC-004: 网络访问控制测试"""
         sandbox = self.SecuritySandbox()
-        sandbox.restrict_network_access(["localhost", "192.168.1.0/24"])
+        sandbox.restrict_network_access(["localhost", "10.0.0.0/8"])
         
         # 验收标准: is_host_allowed() 正确识别白名单内的主机
         assert sandbox.is_host_allowed("localhost") is True
-        assert sandbox.is_host_allowed("192.168.1.1") is True
+        assert sandbox.is_host_allowed("10.0.0.1") is True
         assert sandbox.is_host_allowed("evil.com") is False
     
     def test_ac005_file_access_control(self):
@@ -318,10 +318,10 @@ class TestSecuritySandboxAcceptance:
     def test_ac008_cidr_network_support(self):
         """AC-008: CIDR 支持测试"""
         sandbox = self.SecuritySandbox()
-        sandbox.restrict_network_access(["192.168.1.0/24"])
+        sandbox.restrict_network_access(["10.0.0.0/8"])
         
-        # 验收标准: is_host_allowed("192.168.1.1") 对 "192.168.1.0/24" 返回 True
-        assert sandbox.is_host_allowed("192.168.1.1") is True
+        # 验收标准: is_host_allowed("10.0.0.1") 对 "10.0.0.0/8" 返回 True
+        assert sandbox.is_host_allowed("10.0.0.1") is True
         assert sandbox.is_host_allowed("192.168.2.1") is False
 
 

@@ -36,18 +36,18 @@
 | 配置主机路径 | `/volume1/docker/qwenpaw/monitoring/prometheus/prometheus.yml` |
 | 新增 job | `otel-collector` (:8889, 10s) |
 | 新增 job | `otel-collector-telemetry` (:8881, 30s) |
-| 采集目标 IP | `172.24.0.1` (Docker 网关) |
+| 采集目标 IP | `<host-gateway>` (Docker 网关) |
 
 ### Prometheus Targets 最终状态
 
 | Job | Instance | Health |
 |:---|:---|:---:|
-| otel-collector | 172.24.0.1:8889 | ✅ up |
-| otel-collector-telemetry | 172.24.0.1:8881 | ✅ up |
-| qwenpaw-metrics | 172.24.0.1:9101 | ✅ up |
-| ten-agent-health | 172.24.0.1:9101 | ✅ up |
-| ten-agent-circuit-breaker | 172.24.0.1:9101 | ✅ up |
-| ten-agent-memory | 172.24.0.1:9101 | ✅ up |
+| otel-collector | host-gateway:8889 | ✅ up |
+| otel-collector-telemetry | host-gateway:8881 | ✅ up |
+| qwenpaw-metrics | host-gateway:9101 | ✅ up |
+| ten-agent-health | host-gateway:9101 | ✅ up |
+| ten-agent-circuit-breaker | host-gateway:9101 | ✅ up |
+| ten-agent-memory | host-gateway:9101 | ✅ up |
 | node-exporter | node-exporter:9100 | ✅ up |
 | knowledge-metrics | ten-agent-knowledge-metrics:9103 | ✅ up |
 
@@ -78,7 +78,7 @@ Prometheus (:9090)
 | 3 | 容器启动 400: port 8888 already in use | NAS 主机端口 8888 已被占用 | telemetry 端口改为 8881 |
 | 4 | 端口 4318/8889 未绑定到主机 | 镜像 `ExposedPorts` 不含这些端口，`PortBindings` 无效 | 改用 `NetworkMode: host` |
 | 5 | Prometheus 报 "duplicate label names" | `const_labels` 与 `resource_to_telemetry_conversion` 冲突 | 移除 `const_labels` |
-| 6 | Prometheus 目标 down | `host.docker.internal` 在 Linux Docker 中不可解析 | 改用网关 IP `172.24.0.1` |
+| 6 | Prometheus 目标 down | `host.docker.internal` 在 Linux Docker 中不可解析 | 改用网关 IP `<host-gateway>` |
 | 7 | Prometheus YAML 语法错误 | OTel targets 被错误插入 `global:` 段 | 移至 `scrape_configs:` 段 |
 
 ---

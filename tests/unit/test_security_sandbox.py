@@ -83,9 +83,9 @@ def test_sandbox_network_whitelist():
     sandbox = SecuritySandbox()
     
     # Add hosts to whitelist
-    sandbox.restrict_network_access(["192.168.1.0/24", "localhost"])
+    sandbox.restrict_network_access(["10.0.0.0/8", "localhost"])
     
-    assert sandbox.is_host_allowed("192.168.1.1") is True
+    assert sandbox.is_host_allowed("10.0.0.1") is True
     assert sandbox.is_host_allowed("localhost") is True
     assert sandbox.is_host_allowed("evil.com") is False
 

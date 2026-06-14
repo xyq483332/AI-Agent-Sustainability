@@ -47,12 +47,12 @@
 
 | Job | Target | 间隔 | 说明 |
 |:---|:---|:---:|:---|
-| `otel-collector` | 172.24.0.1:8889 | 10s | OTel Collector 指标导出 |
-| `otel-collector-telemetry` | 172.24.0.1:8881 | 30s | OTel Collector 内部遥测 |
-| `qwenpaw-metrics` | 172.24.0.1:9101 | 10s | Agent 指标导出 |
-| `ten-agent-health` | 172.24.0.1:9101 | 10s | Agent 健康指标 |
-| `ten-agent-circuit-breaker` | 172.24.0.1:9101 | 10s | 熔断器状态 |
-| `ten-agent-memory` | 172.24.0.1:9101 | 60s | 内存质量指标 |
+| `otel-collector` | host-gateway:8889 | 10s | OTel Collector 指标导出 |
+| `otel-collector-telemetry` | host-gateway:8881 | 30s | OTel Collector 内部遥测 |
+| `qwenpaw-metrics` | host-gateway:9101 | 10s | Agent 指标导出 |
+| `ten-agent-health` | host-gateway:9101 | 10s | Agent 健康指标 |
+| `ten-agent-circuit-breaker` | host-gateway:9101 | 10s | 熔断器状态 |
+| `ten-agent-memory` | host-gateway:9101 | 60s | 内存质量指标 |
 | `node-exporter` | node-exporter:9100 | 30s | 主机指标 |
 | `knowledge-metrics` | ten-agent-knowledge-metrics:9103 | 30s | 知识库指标 |
 
@@ -164,7 +164,7 @@ python -c "import yaml; yaml.safe_load(open('config/prometheus.yml'))"
 # ✅ 通过
 
 # 采集目标验证
-curl http://192.168.1.3:9090/api/v1/targets | jq '.data.activeTargets[].health'
+curl http://<host-ip>:9090/api/v1/targets | jq '.data.activeTargets[].health'
 # ✅ 8/8 targets up
 ```
 
@@ -172,12 +172,12 @@ curl http://192.168.1.3:9090/api/v1/targets | jq '.data.activeTargets[].health'
 
 ```bash
 # 端口验证
-curl http://192.168.1.3:8889/metrics  # Prometheus Exporter
-curl http://192.168.1.3:8881/metrics  # Internal Telemetry
+curl http://<host-ip>:8889/metrics  # Prometheus Exporter
+curl http://<host-ip>:8881/metrics  # Internal Telemetry
 # ✅ 两个端口均可达
 
 # OTLP 管道验证
-curl -X POST http://192.168.1.3:4318/v1/metrics -d @test-payload.json
+curl -X POST http://<host-ip>:4318/v1/metrics -d @test-payload.json
 # ✅ HTTP 200, 指标已流入 Prometheus
 ```
 
@@ -185,7 +185,7 @@ curl -X POST http://192.168.1.3:4318/v1/metrics -d @test-payload.json
 
 | 问题 | 影响 | 状态 |
 |:---|:---|:---:|
-| NAS 端口 8888 被占用 | OTel telemetry 端口改为 8881 | ✅ 已解决 |
+| 端口 8888 被占用 | OTel telemetry 端口改为 8881 | ✅ 已解决 |
 | `host.docker.internal` 在 Linux 不可用 | Prometheus 使用网关 IP | ✅ 已解决 |
 | `const_labels` 与 `resource_to_telemetry` 冲突 | 移除 `const_labels` | ✅ 已解决 |
 

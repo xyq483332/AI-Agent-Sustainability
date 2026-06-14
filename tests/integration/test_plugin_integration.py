@@ -98,9 +98,9 @@ def test_security_integration():
     sandbox = SecuritySandbox()
     
     # Configure security
-    sandbox.restrict_network_access(["192.168.1.0/24", "localhost"])
+    sandbox.restrict_network_access(["10.0.0.0/8", "localhost"])
     sandbox.restrict_file_access(
-        read_paths=["/volume1/docker/qwenpaw/"],
+        read_paths=["/var/data/"],
         write_paths=["/tmp/output/"]
     )
     
@@ -109,8 +109,8 @@ def test_security_integration():
         "name": "valid_plugin",
         "permissions": ["read_memory"],
         "security": {
-            "network_whitelist": ["192.168.1.1"],
-            "file_read_paths": ["/volume1/docker/qwenpaw/config"]
+            "network_whitelist": ["10.0.0.1"],
+            "file_read_paths": ["/var/data/config"]
         }
     }
     
