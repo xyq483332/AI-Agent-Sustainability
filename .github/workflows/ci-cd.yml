@@ -64,7 +64,7 @@ jobs:
       
       - name: Verify imports
         run: |
-          python -c "from src.plugin_system.manager import PluginManager; print('✅ PluginManager import OK')"
+          python -c "from src.plugins.manager import PluginManager; print('✅ PluginManager import OK')"
           python -c "from src.security.sandbox import SecuritySandbox; print('✅ SecuritySandbox import OK')"
           python -c "from src.observability.metrics import MetricsCollector; print('✅ MetricsCollector import OK')"
 
