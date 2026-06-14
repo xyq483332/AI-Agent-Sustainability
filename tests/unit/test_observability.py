@@ -4,22 +4,23 @@ Unit Tests for Observability Stack (OpenTelemetry-based)
 Tests use an in-memory OTel MetricReader so no running Collector is needed.
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 from observability.metrics import MetricsCollector, PluginMetrics
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_collector():
     """Create a MetricsCollector backed by an in-memory OTel reader."""
@@ -32,6 +33,7 @@ def _make_collector():
 # ---------------------------------------------------------------------------
 # MetricsCollector tests
 # ---------------------------------------------------------------------------
+
 
 def test_metrics_collector_initialization():
     """Test metrics collector initialization"""
@@ -55,7 +57,12 @@ def test_metrics_collector_increment_counter():
 
     # OTel metric exported
     data = reader.get_metrics_data()
-    names = [m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics]
+    names = [
+        m.name
+        for rm in data.resource_metrics
+        for sm in rm.scope_metrics
+        for m in sm.metrics
+    ]
     assert "test_counter" in names
 
     provider.shutdown()
@@ -71,7 +78,12 @@ def test_metrics_collector_set_gauge():
     assert collector.gauges["test_gauge"] == 50.0
 
     data = reader.get_metrics_data()
-    names = [m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics]
+    names = [
+        m.name
+        for rm in data.resource_metrics
+        for sm in rm.scope_metrics
+        for m in sm.metrics
+    ]
     assert "test_gauge" in names
 
     provider.shutdown()
@@ -90,7 +102,12 @@ def test_metrics_collector_observe_histogram():
 
     # OTel metric exported
     data = reader.get_metrics_data()
-    names = [m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics]
+    names = [
+        m.name
+        for rm in data.resource_metrics
+        for sm in rm.scope_metrics
+        for m in sm.metrics
+    ]
     assert "test_histogram" in names
 
     provider.shutdown()
@@ -107,7 +124,7 @@ def test_metrics_collector_reset():
     collector.reset()
 
     metrics = collector.get_metrics()
-    assert metrics['metrics'] == ""
+    assert metrics["metrics"] == ""
 
     provider.shutdown()
 
@@ -157,6 +174,7 @@ def test_labels():
 # ---------------------------------------------------------------------------
 # PluginMetrics tests
 # ---------------------------------------------------------------------------
+
 
 def test_plugin_metrics():
     """Test plugin-specific metrics via OTel"""

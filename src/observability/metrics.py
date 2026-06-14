@@ -11,18 +11,16 @@ Data flow:
   App code → MetricsCollector → OTel SDK (OTLP gRPC) → OTel Collector → Prometheus scrape (:8889)
 """
 
-import os
 import logging
-from typing import Dict, Any, Optional
+import os
+from typing import Any, Dict, Optional
 
 from opentelemetry import metrics
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import \
+    OTLPMetricExporter
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import (
-    PeriodicExportingMetricReader,
-    AggregationTemporality,
-)
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +45,7 @@ _meter = _meter_provider.get_meter(_SERVICE_NAME, "1.0.0")
 # MetricsCollector – wraps OTel instruments with a dict-based query API
 # ---------------------------------------------------------------------------
 
+
 class MetricsCollector:
     """Thin wrapper around OTel Meter that keeps the original dict-based API.
 
@@ -68,7 +67,9 @@ class MetricsCollector:
 
     # -- public helpers -----------------------------------------------------
 
-    def increment_counter(self, name: str, value: float = 1, labels: Dict[str, str] = None):
+    def increment_counter(
+        self, name: str, value: float = 1, labels: Dict[str, str] = None
+    ):
         key = self._make_key(name, labels)
         self.counters[key] = self.counters.get(key, 0) + value
         instr = self._get_or_create_counter(name)
@@ -143,6 +144,7 @@ class MetricsCollector:
 # PluginMetrics – domain-specific helpers
 # ---------------------------------------------------------------------------
 
+
 class PluginMetrics:
     """High-level helpers for plugin lifecycle metrics."""
 
@@ -151,32 +153,42 @@ class PluginMetrics:
 
     def record_plugin_load(self, plugin_name: str, duration_ms: float):
         self._c.observe_histogram(
-            "plugin_load_duration_ms", duration_ms,
+            "plugin_load_duration_ms",
+            duration_ms,
             labels={"plugin": plugin_name},
         )
 
-    def record_plugin_execution(self, plugin_name: str, duration_ms: float, success: bool):
+    def record_plugin_execution(
+        self, plugin_name: str, duration_ms: float, success: bool
+    ):
         self._c.observe_histogram(
-            "plugin_execution_duration_ms", duration_ms,
+            "plugin_execution_duration_ms",
+            duration_ms,
             labels={"plugin": plugin_name, "success": str(success).lower()},
         )
         self._c.increment_counter(
-            "plugin_execution_total", 1,
+            "plugin_execution_total",
+            1,
             labels={"plugin": plugin_name, "success": str(success).lower()},
         )
 
-    def record_security_validation(self, plugin_name: str, duration_ms: float, passed: bool):
+    def record_security_validation(
+        self, plugin_name: str, duration_ms: float, passed: bool
+    ):
         self._c.observe_histogram(
-            "security_validation_duration_ms", duration_ms,
+            "security_validation_duration_ms",
+            duration_ms,
             labels={"plugin": plugin_name, "passed": str(passed).lower()},
         )
         self._c.increment_counter(
-            "security_validation_total", 1,
+            "security_validation_total",
+            1,
             labels={"plugin": plugin_name, "passed": str(passed).lower()},
         )
 
     def set_plugin_memory_usage(self, plugin_name: str, memory_mb: float):
         self._c.set_gauge(
-            "plugin_memory_usage_mb", memory_mb,
+            "plugin_memory_usage_mb",
+            memory_mb,
             labels={"plugin": plugin_name},
         )

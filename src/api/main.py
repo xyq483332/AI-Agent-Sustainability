@@ -4,21 +4,22 @@ API Main Application
 FastAPI application for plugin system API.
 """
 
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-import uvicorn
 
+from ..observability.metrics import MetricsCollector, PluginMetrics
 from ..plugins.manager import PluginManager
 from ..security.sandbox import SecuritySandbox
-from ..observability.metrics import MetricsCollector, PluginMetrics
 
 # Initialize FastAPI app
 app = FastAPI(
     title="AI Agent Sustainable Evolution API",
     description="Plugin management and security sandbox API",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Initialize components
@@ -71,22 +72,23 @@ async def register_plugin(request: PluginRequest):
             "version": request.version,
             "module": request.module,
             "permissions": request.permissions,
-            "security": request.security
+            "security": request.security,
         }
-        
+
         if not security_sandbox.validate_plugin(plugin_meta):
-            raise HTTPException(status_code=403, detail="Plugin failed security validation")
-        
+            raise HTTPException(
+                status_code=403, detail="Plugin failed security validation"
+            )
+
         # Load plugin
         success = plugin_manager.load_plugin(request.module)
         if not success:
             raise HTTPException(status_code=500, detail="Failed to load plugin")
-        
+
         return PluginResponse(
-            success=True,
-            message=f"Plugin {request.name} registered successfully"
+            success=True, message=f"Plugin {request.name} registered successfully"
         )
-        
+
     except HTTPException:
         # Re-raise HTTP exceptions (like 403)
         raise
@@ -100,7 +102,7 @@ async def execute_plugin(plugin_name: str, request: PluginExecuteRequest):
     try:
         result = plugin_manager.execute_plugin(plugin_name, request.context)
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -111,10 +113,9 @@ async def unregister_plugin(plugin_name: str):
     success = plugin_manager.unload_plugin(plugin_name)
     if not success:
         raise HTTPException(status_code=404, detail="Plugin not found")
-    
+
     return PluginResponse(
-        success=True,
-        message=f"Plugin {plugin_name} unregistered successfully"
+        success=True, message=f"Plugin {plugin_name} unregistered successfully"
     )
 
 
@@ -124,7 +125,7 @@ async def get_plugin_info(plugin_name: str):
     info = plugin_manager.get_plugin_info(plugin_name)
     if not info:
         raise HTTPException(status_code=404, detail="Plugin not found")
-    
+
     return info
 
 
@@ -148,9 +149,9 @@ async def validate_plugin_security(request: PluginRequest):
         "version": request.version,
         "module": request.module,
         "permissions": request.permissions,
-        "security": request.security
+        "security": request.security,
     }
-    
+
     is_valid = security_sandbox.validate_plugin(plugin_meta)
     return {"valid": is_valid}
 

@@ -5,21 +5,21 @@ Entry point for the application.
 Initialises OTel SDK (metrics export via OTLP → OTel Collector → Prometheus).
 """
 
-import os
-import uvicorn
 import logging
-from fastapi import FastAPI
+import os
 from contextlib import asynccontextmanager
 
+import uvicorn
+from fastapi import FastAPI
+
 from .api.main import app
+from .observability.metrics import MetricsCollector
 from .plugins.manager import PluginManager
 from .security.sandbox import SecuritySandbox
-from .observability.metrics import MetricsCollector
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting AI Agent Sustainable Evolution System")
     logger.info(f"OTEL_SERVICE_NAME   = {os.getenv('OTEL_SERVICE_NAME', 'not set')}")
-    logger.info(f"OTEL_EXPORTER_OTLP  = {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'not set')}")
+    logger.info(
+        f"OTEL_EXPORTER_OTLP  = {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'not set')}"
+    )
 
     yield
 
@@ -50,11 +52,7 @@ app.router.lifespan_context = lifespan
 def main():
     """Main entry point"""
     uvicorn.run(
-        "src.main:app",
-        host="0.0.0.0",
-        port=8080,
-        reload=True,
-        log_level="info"
+        "src.main:app", host="0.0.0.0", port=8080, reload=True, log_level="info"
     )
 
 

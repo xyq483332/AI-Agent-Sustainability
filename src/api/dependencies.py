@@ -4,9 +4,9 @@ API Dependencies
 Dependency injection for FastAPI endpoints.
 """
 
+from ..observability.metrics import MetricsCollector, PluginMetrics
 from ..plugins.manager import PluginManager
 from ..security.sandbox import SecuritySandbox
-from ..observability.metrics import MetricsCollector, PluginMetrics
 
 
 def get_plugin_manager() -> PluginManager:
