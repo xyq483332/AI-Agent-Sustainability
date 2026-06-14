@@ -1,0 +1,67 @@
+groups:
+  - name: plugin_system_alerts
+    rules:
+      - alert: HighPluginErrorRate
+        expr: rate(plugin_execution_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High plugin error rate detected"
+          description: "Plugin error rate is above 10% for 5 minutes"
+          
+      - alert: PluginLoadTimeHigh
+        expr: histogram_quantile(0.95, rate(plugin_load_duration_ms_bucket[5m])) > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High plugin load time"
+          description: "95th percentile plugin load time is above 500ms"
+          
+      - alert: SecurityValidationFailures
+        expr: rate(security_validation_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Security validation failures detected"
+          description: "Security validation failures are occurring"
+          
+      - alert: HighMemoryUsage
+        expr: plugin_memory_usage_mb > 200
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Plugin memory usage is above 200MB"
+
+  - name: infrastructure_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "{{ $labels.instance }} has been down for more than 1 minute"
+          
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% for 5 minutes"
+          
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 20%"

@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'plugin-system'
+    static_configs:
+      - targets: ['plugin-system:8080']
+    metrics_path: '/api/v1/metrics'
+    scrape_interval: 10s
+    
+  - job_name: 'security-sandbox'
+    static_configs:
+      - targets: ['security-sandbox:8081']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+    
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+    
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
