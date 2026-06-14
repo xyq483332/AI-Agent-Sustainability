@@ -87,6 +87,9 @@ async def register_plugin(request: PluginRequest):
             message=f"Plugin {request.name} registered successfully"
         )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 403)
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
