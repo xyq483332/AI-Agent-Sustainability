@@ -2,8 +2,10 @@
 AI Agent Sustainable Evolution - Main Application
 
 Entry point for the application.
+Initialises OTel SDK (metrics export via OTLP → OTel Collector → Prometheus).
 """
 
+import os
 import uvicorn
 import logging
 from fastapi import FastAPI
@@ -32,21 +34,13 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     logger.info("Starting AI Agent Sustainable Evolution System")
-    
-    # Initialize components
-    logger.info("Initializing plugin manager")
-    logger.info("Initializing security sandbox")
-    logger.info("Initializing metrics collector")
-    
+    logger.info(f"OTEL_SERVICE_NAME   = {os.getenv('OTEL_SERVICE_NAME', 'not set')}")
+    logger.info(f"OTEL_EXPORTER_OTLP  = {os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'not set')}")
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down AI Agent Sustainable Evolution System")
-    
-    # Cleanup components
-    logger.info("Cleaning up plugin manager")
-    logger.info("Cleaning up security sandbox")
-    logger.info("Cleaning up metrics collector")
 
 
 # Update app with lifespan

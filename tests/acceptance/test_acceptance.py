@@ -326,126 +326,134 @@ class TestSecuritySandboxAcceptance:
 
 
 class TestObservabilityAcceptance:
-    """可观测性验收测试"""
-    
-    def setup_method(self):
-        """测试前设置"""
-        from observability.metrics import MetricsCollector, PluginMetrics
-        self.MetricsCollector = MetricsCollector
-        self.PluginMetrics = PluginMetrics
-    
+    """可观测性验收测试 (OpenTelemetry-based)"""
+
+    def _make_collector(self):
+        """Create a MetricsCollector backed by an in-memory OTel reader."""
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+        from observability.metrics import MetricsCollector
+
+        reader = InMemoryMetricReader()
+        provider = MeterProvider(metric_readers=[reader])
+        meter = provider.get_meter("test-acceptance", "0.0.0")
+        return MetricsCollector(meter=meter), reader, provider
+
     def test_ac001_metrics_collector_initialization(self):
-        """AC-001: MetricsCollector 初始化测试"""
-        collector = self.MetricsCollector()
-        
+        """AC-001: MetricsCollector 初始化测试 (OTel-backed)"""
+        collector, reader, provider = self._make_collector()
+
         # 验收标准: MetricsCollector() 创建成功
         assert collector is not None
-        
+
         # 验收标准: 指标存储为空
         metrics = collector.get_metrics()
         assert "metrics" in metrics
-    
+        provider.shutdown()
+
     def test_ac002_counter_metrics(self):
-        """AC-002: 计数器指标测试"""
-        collector = self.MetricsCollector()
-        
-        # 增加计数器
+        """AC-002: 计数器指标测试 (OTel Counter)"""
+        collector, reader, provider = self._make_collector()
+
         collector.increment_counter("test_counter")
         collector.increment_counter("test_counter")
         collector.increment_counter("test_counter", 5)
-        
+
         # 验收标准: increment_counter() 正确增加计数器值
-        metrics = collector.get_metrics()
-        # get_metrics() 返回 Prometheus 格式的字符串
-        assert "test_counter" in metrics["metrics"]
-        # 验证值为 7 (increment_counter 默认值为 1，所以 1+1+5=7)
-        assert "test_counter 7" in metrics["metrics"]
-    
+        assert collector.counters["test_counter"] == 7
+
+        # OTel metric exported
+        data = reader.get_metrics_data()
+        names = [m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics]
+        assert "test_counter" in names
+        provider.shutdown()
+
     def test_ac003_gauge_metrics(self):
-        """AC-003: 仪表指标测试"""
-        collector = self.MetricsCollector()
-        
-        # 设置仪表
+        """AC-003: 仪表指标测试 (OTel UpDownCounter)"""
+        collector, reader, provider = self._make_collector()
+
         collector.set_gauge("test_gauge", 42.5)
-        
+
         # 验收标准: set_gauge() 正确设置仪表值
-        metrics = collector.get_metrics()
-        assert "test_gauge" in metrics["metrics"]
-        assert "test_gauge 42.5" in metrics["metrics"]
-    
+        assert collector.gauges["test_gauge"] == 42.5
+
+        data = reader.get_metrics_data()
+        names = [m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics]
+        assert "test_gauge" in names
+        provider.shutdown()
+
     def test_ac004_histogram_metrics(self):
-        """AC-004: 直方图指标测试"""
-        collector = self.MetricsCollector()
-        
-        # 记录观测值
+        """AC-004: 直方图指标测试 (OTel Histogram)"""
+        collector, reader, provider = self._make_collector()
+
         collector.observe_histogram("test_histogram", 100.0)
         collector.observe_histogram("test_histogram", 200.0)
         collector.observe_histogram("test_histogram", 150.0)
-        
+
         # 验收标准: observe_histogram() 正确记录观测值
-        metrics = collector.get_metrics()
-        assert "test_histogram" in metrics["metrics"]
-        # 验证直方图包含平均值和计数
-        assert "test_histogram_avg" in metrics["metrics"]
-        assert "test_histogram_count 3" in metrics["metrics"]
-    
+        assert len(collector.histograms["test_histogram"]) == 3
+
+        data = reader.get_metrics_data()
+        names = [m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics]
+        assert "test_histogram" in names
+        provider.shutdown()
+
     def test_ac005_metrics_reset(self):
         """AC-005: 指标重置测试"""
-        collector = self.MetricsCollector()
-        
-        # 添加一些指标
+        collector, reader, provider = self._make_collector()
+
         collector.increment_counter("test_counter")
         collector.set_gauge("test_gauge", 100)
-        
-        # 重置
+
         collector.reset()
-        
+
         # 验收标准: reset() 清空所有指标
         metrics = collector.get_metrics()
-        # Prometheus 格式返回空字符串
         assert metrics["metrics"] == ""
-    
+        provider.shutdown()
+
     def test_ac006_plugin_metrics_load_duration(self):
-        """AC-006: 插件加载耗时测试"""
-        collector = self.MetricsCollector()
-        plugin_metrics = self.PluginMetrics(collector)
-        
-        # 记录加载时间
+        """AC-006: 插件加载耗时测试 (OTel Histogram)"""
+        collector, reader, provider = self._make_collector()
+        from observability.metrics import PluginMetrics
+        plugin_metrics = PluginMetrics(collector)
+
         plugin_metrics.record_plugin_load("test_plugin", 150.0)
-        
-        # 验收标准: record_plugin_load() 正确记录加载时间
-        metrics = collector.get_metrics()
-        assert "plugin_load_duration_ms" in metrics["metrics"]
-    
+
+        data = reader.get_metrics_data()
+        names = [m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics]
+        assert "plugin_load_duration_ms" in names
+        provider.shutdown()
+
     def test_ac007_plugin_metrics_execution_duration(self):
-        """AC-007: 插件执行耗时测试"""
-        collector = self.MetricsCollector()
-        plugin_metrics = self.PluginMetrics(collector)
-        
-        # 记录执行时间
+        """AC-007: 插件执行耗时测试 (OTel Histogram + Counter)"""
+        collector, reader, provider = self._make_collector()
+        from observability.metrics import PluginMetrics
+        plugin_metrics = PluginMetrics(collector)
+
         plugin_metrics.record_plugin_execution("test_plugin", 200.0, True)
-        
-        # 验收标准: record_plugin_execution() 正确记录执行时间
-        metrics = collector.get_metrics()
-        assert "plugin_execution_duration_ms" in metrics["metrics"]
-    
+
+        data = reader.get_metrics_data()
+        names = [m.name for rm in data.resource_metrics for sm in rm.scope_metrics for m in sm.metrics]
+        assert "plugin_execution_duration_ms" in names
+        assert "plugin_execution_total" in names
+        provider.shutdown()
+
     def test_ac008_metrics_export(self):
-        """AC-008: 指标导出测试"""
-        collector = self.MetricsCollector()
-        
-        # 添加一些指标
+        """AC-008: 指标导出测试 (get_metrics returns dict)"""
+        collector, reader, provider = self._make_collector()
+
         collector.increment_counter("test_counter")
         collector.set_gauge("test_gauge", 100)
-        
-        # 导出
+
         metrics = collector.get_metrics()
-        
+
         # 验收标准: get_metrics() 返回包含所有指标的字典
         assert isinstance(metrics, dict)
         assert "metrics" in metrics
-        # Prometheus 格式包含指标名称和值
         assert "test_counter" in metrics["metrics"]
         assert "test_gauge" in metrics["metrics"]
+        provider.shutdown()
 
 
 class TestCICDPipelineAcceptance:

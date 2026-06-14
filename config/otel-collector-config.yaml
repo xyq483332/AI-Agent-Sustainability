@@ -1,0 +1,64 @@
+# OpenTelemetry Collector Configuration
+# Pipeline: App (OTel SDK) → OTLP → OTel Collector → Prometheus → Grafana
+#
+# Deployed: ten-agent-otel-collector on NAS (192.168.1.3)
+# NetworkMode: host (all ports bind directly to host)
+# Config path on host: /volume1/docker/otel-collector/config.yaml
+# Config path in container: /etc/otelcol-contrib/config.yaml
+#
+# Verified: 2026-06-14 - Full OTLP→Prometheus pipeline working
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+  # Add resource attributes for all incoming metrics
+  resource:
+    attributes:
+      - key: service.namespace
+        value: "stark-industries"
+        action: upsert
+
+exporters:
+  # Prometheus exporter: Collector exposes metrics on :8889 for Prometheus to scrape
+  # NOTE: const_labels removed to avoid "duplicate label names" error with resource_to_telemetry_conversion
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: otel
+    metric_expiration: 5m
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  # Debug exporter for troubleshooting (logs to stdout)
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [prometheus, debug]
+
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      # NOTE: port 8888 occupied by another service on NAS, using 8881
+      address: 0.0.0.0:8881
+      level: basic

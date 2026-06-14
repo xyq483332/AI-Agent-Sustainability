@@ -1,15 +1,29 @@
 version: '3.8'
 
+# ────────────────────────────────────────────────────────────────
+# Data flow:
+#   App (OTel SDK, OTLP gRPC :4317)
+#     ↓
+#   OTel Collector (receive :4317 → process → export Prometheus :8889)
+#     ↓
+#   Prometheus (scrape otel-collector:8889)
+#     ↓
+#   Grafana (datasource: Prometheus)
+# ────────────────────────────────────────────────────────────────
+
 services:
+  # ── Application services ──────────────────────────────────────
   plugin-system:
     build: .
     ports:
       - "8080:8080"
     environment:
-      - NODE_ENV=production
+      - APP_ENV=production
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/plugins
       - REDIS_URL=redis://redis:6379
       - LOG_LEVEL=INFO
+      - OTEL_SERVICE_NAME=plugin-system
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     volumes:
       - ./config:/app/config
       - ./logs:/app/logs
@@ -26,6 +40,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - otel-collector
     restart: unless-stopped
 
   security-sandbox:
@@ -34,9 +49,11 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - NODE_ENV=production
+      - APP_ENV=production
       - PLUGIN_SYSTEM_URL=http://plugin-system:8080
       - LOG_LEVEL=INFO
+      - OTEL_SERVICE_NAME=security-sandbox
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     networks:
       - app-network
     deploy:
@@ -46,24 +63,57 @@ services:
           memory: 1G
     depends_on:
       - plugin-system
+      - otel-collector
     restart: unless-stopped
 
+  # ── OpenTelemetry Collector ───────────────────────────────────
+  # Verified: 2026-06-14, otel/opentelemetry-collector-contrib:0.102.0
+  # Note: contrib image uses /etc/otelcol-contrib/config.yaml (NOT /etc/otelcol/)
+  # Note: const_labels removed to avoid duplicate label errors with resource_to_telemetry
+  # Note: telemetry port 8888→8881 to avoid NAS port conflict
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.0
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus exporter (scrape target)
+      - "8881:8881"   # Collector telemetry (own metrics)
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    restart: unless-stopped
+
+  # ── Monitoring stack ──────────────────────────────────────────
   observability:
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
       - prometheus-data:/prometheus
     networks:
       - app-network
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.console.libraries=/prometheus/console_libraries'
+      - '--web.console.templates=/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
+    depends_on:
+      - otel-collector
     restart: unless-stopped
 
   grafana:
@@ -82,6 +132,7 @@ services:
       - observability
     restart: unless-stopped
 
+  # ── Infrastructure ────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     environment:

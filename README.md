@@ -17,7 +17,7 @@ A comprehensive system for building AI agents with sustainable evolution capabil
 ### Key Capabilities
 - ✅ Plugin lifecycle management (load/execute/unload)
 - ✅ Security validation and permission management
-- ✅ Real-time metrics and monitoring
+- ✅ OpenTelemetry observability (OTel SDK → OTLP → OTel Collector → Prometheus → Grafana)
 - ✅ Automated testing and deployment
 - ✅ Scalable architecture
 
@@ -29,16 +29,22 @@ ai-agent-sustainability/
 │   ├── api/              # FastAPI REST API
 │   ├── plugins/          # Plugin system implementation
 │   ├── security/         # Security sandbox
-│   ├── observability/    # Monitoring and metrics
+│   ├── observability/    # OpenTelemetry metrics (OTel SDK)
 │   └── cicd/             # CI/CD utilities
 ├── tests/
-│   ├── unit/             # Unit tests
+│   ├── unit/             # Unit tests (InMemoryMetricReader)
 │   ├── integration/      # Integration tests
+│   ├── acceptance/       # Acceptance tests (AC-verified)
 │   └── security/         # Security tests
-├── config/               # Configuration files
+├── config/
+│   ├── otel-collector-config.yaml  # OTel Collector pipeline
+│   ├── prometheus.yml              # Prometheus scrape config
+│   ├── alert_rules.yml             # Alert rules (7 rules)
+│   ├── plugin_template.json        # Plugin metadata template
+│   └── init.sql                    # PostgreSQL schema
 ├── docs/                 # Documentation
 │   ├── ac/               # Acceptance criteria
-│   ├── architecture/     # Architecture documents
+│   ├── architecture/     # Architecture docs + ADRs
 │   └── api/              # API documentation
 └── .github/workflows/    # GitHub Actions CI/CD
 ```
@@ -103,18 +109,30 @@ pytest tests/integration/ -v
 pytest tests/ --cov=src --cov-report=html
 ```
 
-## 📊 Monitoring
+## 📊 Monitoring (OpenTelemetry)
+
+### Data Flow
+```
+App (OTel SDK) → OTLP gRPC → OTel Collector → Prometheus → Grafana
+```
 
 ### Access Services
 - **API**: http://localhost:8080
+- **OTel Collector**: OTLP gRPC on `:4317`, Prometheus export on `:8889`
 - **Prometheus**: http://localhost:9090
 - **Grafana**: http://localhost:3000 (admin/admin)
 
 ### Metrics Available
-- Plugin execution metrics
-- Security validation metrics
-- System resource metrics
-- Custom business metrics
+- `plugin_load_duration_ms` — Plugin load time (Histogram)
+- `plugin_execution_duration_ms` — Plugin execution time (Histogram)
+- `plugin_execution_total` — Plugin execution count (Counter)
+- `security_validation_duration_ms` — Security validation time (Histogram)
+- `plugin_memory_usage_mb` — Plugin memory usage (Gauge)
+
+### Configuration
+- OTel Collector: `config/otel-collector-config.yaml`
+- Prometheus: `config/prometheus.yml`
+- Alert Rules: `config/alert_rules.yml` (7 rules)
 
 ## 🔒 Security
 
